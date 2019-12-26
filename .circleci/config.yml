@@ -1,0 +1,14 @@
+version: 2.1
+orbs:
+  orb-tools: circleci/orb-tools@9.0.0
+  telegram: pawanbahuguna/telegram@1.0
+
+jobs:
+  notifytest:
+    executor: orb-tools/ubuntu
+    steps:
+      - run: exit 0 #toggle this to force success or status for testing
+      - telegram/notify:
+          message: "notification test for the Telegram orb, triggered by *<https://github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/commit/${CIRCLE_SHA1}|commit ${CIRCLE_SHA1}>* on ${CIRCLE_PROJECT_REPONAME}'s *${CIRCLE_BRANCH}* branch (<https://circleci.com/workflow-run/${CIRCLE_WORKFLOW_ID}|workflow here>)"
+          color: "#f4aa42"
+          mentions: "${ORBS_USER_GROUP_UUID}"
