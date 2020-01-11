@@ -42,7 +42,7 @@ commands:
       channel:
         default: ${TELEGRAM_GROUPID}
         description: |
-          ID of channel if set, overrides webhook's default channel setting
+          ID of group if set, overrides webhook's default channel setting
         type: string
       fail_only:
         default: false
@@ -53,21 +53,6 @@ commands:
         default: '%F0%9F%98%A2 A $CIRCLE_JOB job has failed!'
         description: Enter custom message.
         type: string
-      include_job_number_field:
-        default: true
-        description: |
-          Whether or not to include the Job Number field in the message
-        type: boolean
-      include_project_field:
-        default: true
-        description: |
-          Whether or not to include the Project field in the message
-        type: boolean
-      include_visit_job_action:
-        default: true
-        description: |
-          Whether or not to include the Visit Job action in the message
-        type: boolean
       mentions:
         default: ""
         description: |
