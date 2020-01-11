@@ -159,5 +159,6 @@ jobs:
     steps:
       - checkout # check out the code in the project directory
       - run: exit 0
+      - notification
       - status:
          fail_only: false
