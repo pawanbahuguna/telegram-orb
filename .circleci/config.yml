@@ -21,7 +21,7 @@ commands:
       groupid:
         default: ${TELEGRAM_GROUPID}
         description: Enter Telegram Group ID or use the CircleCI UI to add
-          it under the 'TELEGRAM_GROUPID' env var. Not recommended to mention view orb.
+          it under the 'TELEGRAM_GROUPID' env var. Not recommended to mention via orb.
         type: string
       message:
         default: "Nil"
@@ -36,7 +36,7 @@ commands:
             echo "Please input your TELEGRAM_WEBHOOK value either in the settings for this project, or as a parameter for this orb." && exit 1
           else
           temoji=%E2%84%B9
-          curl << parameters.webhook >>/sendMessage?"chat_id=<< parameters.groupid >>&text=%F0%9F%94%89 Below are the details of your build no.: ${CIRCLE_BUILD_NUM} %0A %F0%9F%95%9C Date: $(date) %0A $temoji BUILD_URL: ${CIRCLE_BUILD_URL} %0A $temoji TRIGGERER: ${CIRCLE_USERNAME} %0A %F0%9F%93%8B MESSAGE: << parameters.message >> %0A"
+          curl -X POST -H 'Content-type: application/json' << parameters.webhook >>/sendMessage?"chat_id=<< parameters.groupid >>&text=%F0%9F%94%89 Below are the details of your build no.: ${CIRCLE_BUILD_NUM} %0A %F0%9F%95%9C Date: $(date) %0A $temoji BUILD_URL: ${CIRCLE_BUILD_URL} %0A $temoji TRIGGERER: ${CIRCLE_USERNAME} %0A %F0%9F%93%8B MESSAGE: << parameters.message >> %0A"
           fi
   status:
     description: |
@@ -116,13 +116,13 @@ commands:
                   echo '"fail_only" is set to "true". No TELEGRAM notification sent.'
                 else
                   temoji=%E2%9C%85
-                  curl << parameters.webhook >>/sendMessage?"chat_id=<< parameters.channel >>&text=%F0%9F%94%89 Build Succeeded: Please check details below: %0A %F0%9F%95%9C Date: $(date) %0A $temoji Job Number: $CIRCLE_BUILD_NUM %0A $temoji TRIGGERER: ${CIRCLE_USERNAME} %0A %F0%9F%93%8B MESSAGE: << parameters.success_message >> %0A BUILD_URL: ${CIRCLE_BUILD_URL} %0A"
+                  curl -X POST -H 'Content-type: application/json' << parameters.webhook >>/sendMessage?"chat_id=<< parameters.channel >>&text=%F0%9F%94%89 Build Succeeded: Please check details below: %0A %F0%9F%95%9C Date: $(date) %0A $temoji Job Number: $CIRCLE_BUILD_NUM %0A $temoji TRIGGERER: ${CIRCLE_USERNAME} %0A %F0%9F%93%8B MESSAGE: << parameters.success_message >> %0A BUILD_URL: ${CIRCLE_BUILD_URL} %0A"
                   echo "Job completed successfully. Alert sent."
                 fi
               else
                 #If Failed
                 temoji=%E2%9D%8C
-          curl << parameters.webhook >>/sendMessage?"chat_id=<< parameters.channel >>&text=%F0%9F%9A%A8 Build Failed: Please check details below: %0A %F0%9F%95%9C Date: $(date) %0A $temoji Job Number: $CIRCLE_BUILD_NUM %0A $temoji TRIGGERER: ${CIRCLE_USERNAME} %0A %F0%9F%93%8B MESSAGE: << parameters.failure_message >> %0A BUILD_URL: ${CIRCLE_BUILD_URL} %0A"
+          curl -X POST -H 'Content-type: application/json' << parameters.webhook >>/sendMessage?"chat_id=<< parameters.channel >>&text=%F0%9F%9A%A8 Build Failed: Please check details below: %0A %F0%9F%95%9C Date: $(date) %0A $temoji Job Number: $CIRCLE_BUILD_NUM %0A $temoji TRIGGERER: ${CIRCLE_USERNAME} %0A %F0%9F%93%8B MESSAGE: << parameters.failure_message >> %0A BUILD_URL: ${CIRCLE_BUILD_URL} %0A"
           
                 echo "Job failed. Alert sent."
               fi
