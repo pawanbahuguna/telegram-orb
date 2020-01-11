@@ -5,7 +5,10 @@
 # Verision: 1.0.1
 
 version: 2.1
-
+description: |
+   The Aim of this orb is to send notifications to telegram group.
+   Success and failure alerts can also be send using status command.
+   
 commands:
   notification:
     description: Send notification to Telegram group when jobs are successful.
@@ -42,7 +45,7 @@ commands:
       channel:
         default: ${TELEGRAM_GROUPID}
         description: |
-          ID of group if set, overrides webhook's default channel setting
+          ID of channel if set, overrides webhook's default channel setting
         type: string
       fail_only:
         default: false
@@ -52,11 +55,6 @@ commands:
       failure_message:
         default: '%F0%9F%98%A2 A $CIRCLE_JOB job has failed!'
         description: Enter custom message.
-        type: string
-      mentions:
-        default: ""
-        description: |
-          A comma separated list of user IDs. No spaces.
         type: string
       only_for_branches:
         default: ""
@@ -109,19 +107,7 @@ commands:
               echo "Please input your TELEGRAM_WEBHOOK value either in the settings for this project, or as a parameter for this orb."
               exit 1
             else
-              #Create Members string
-              if [ -n "<< parameters.mentions >>" ]; then
-                IFS="," read -ra TELEGRAM_MEMBERS \<<< "<< parameters.mentions >>"
-                for i in "${TELEGRAM_MEMBERS[@]}"; do
-                  if [ $(echo ${i} | head -c 1) == "S" ]; then
-                    TELEGRAM_MENTIONS="${TELEGRAM_MENTIONS}<!subteam^${i}> "
-                  elif echo ${i} | grep -E "^(here|channel|everyone)$" > /dev/null; then
-                    TELEGRAM_MENTIONS="${TELEGRAM_MENTIONS}<!${i}> "
-                  else
-                    TELEGRAM_MENTIONS="${TELEGRAM_MENTIONS}<@${i}> "
-                  fi
-                done
-              fi
+
               #If successful
               if [ "$TELEGRAM_BUILD_STATUS" = "success" ]; then
                 #Skip if fail_only
@@ -152,6 +138,42 @@ executors:
   default:
     docker:
       - image: circleci/node:latest
+      
+example: 
+  notification:
+    description: 'Send notification to Telegram group with a custom message at any point in a job
+      with this custom step.'
+    usage:
+      jobs:
+        build:
+          executor: default
+          steps:
+          - notification:
+              groupid: "-XXXXXXX" # Not recommended as it will show in build logs. Use variable instead via CircleCI UI.
+              message: Your custom message, default is NIL. Users can be mentioned @username
+      orbs:
+        telegram: circleci/telegram@x.y.z
+      version: 2.1
+      workflows:
+        your-workflow:
+          jobs:
+          - build
+  status:
+    description: Send a status alert at the end of a job based on success or failure.
+      This must be the last step in a job.
+    usage:
+      jobs:
+        build:
+          executor: default
+          steps:
+            - checkout
+            - run: exit 0
+            - status:
+                fail_only: false
+                only_for_branches: only_for_branches
+      orbs:
+        telegram: circleci/telegram@x.y.z
+      version: 2.1
 
 jobs:
   build:
@@ -159,6 +181,8 @@ jobs:
     steps:
       - checkout # check out the code in the project directory
       - run: exit 0
-      - notification
+      - notification:
+          message: Message from Telegram repo. Check this @pawanbahuguna. 
       - status:
-         fail_only: false
+          fail_only: false
+    
