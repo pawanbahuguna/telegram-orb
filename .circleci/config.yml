@@ -1,14 +1,178 @@
+# You will have to create a Telegram bot first and add it to Telegram group.
+# Telegram bot cannot send direct messages to the users for security and privacy reasons.
+# Use BotFather bot of telegram to create a telegram bot and get API key.
+# Author: Pawan Bahuguna
+# Verision: 1.0.1
+
 version: 2.1
-orbs:
-  orb-tools: circleci/orb-tools@9.0.0
-  telegram: pawanbahuguna/telegram@1.0
+
+commands:
+  notification:
+    description: Send notification to Telegram group when jobs are successful.
+    parameters:
+      webhook:
+        default: ${TELEGRAM_WEBHOOK}
+        description: Enter either your Webhook value or use the CircleCI UI to add
+          your token under the 'TELEGRAM_WEBHOOK' env var
+        type: string
+      groupid:
+        default: ${TELEGRAM_GROUPID}
+        description: Enter Telegram Group ID or use the CircleCI UI to add
+          it under the 'TELEGRAM_GROUPID' env var. Not recommended to mention view orb.
+        type: string
+      message:
+        default: "Nil"
+        description: Enter your custom message. This is optional.
+        type: string
+    steps:
+    - run:
+       name: Sending message to Telegram group.
+       command: |
+          if [ -z "<< parameters.webhook >>" ]; then
+            echo "NO Telegram WEBHOOK SET"
+            echo "Please input your TELEGRAM_WEBHOOK value either in the settings for this project, or as a parameter for this orb." && exit 1
+          else
+          temoji=%E2%84%B9
+          curl << parameters.webhook >>/sendMessage?"chat_id=<< parameters.groupid >>&text=%F0%9F%94%89 Below are the details of your build no.: ${CIRCLE_BUILD_NUM} %0A %F0%9F%95%9C Date: $(date) %0A $temoji BUILD_URL: ${CIRCLE_BUILD_URL} %0A $temoji TRIGGERER: ${CIRCLE_USERNAME} %0A %F0%9F%93%8B MESSAGE: << parameters.message >> %0A"
+          fi
+  status:
+    description: |
+      Send a status alert at the end of a job based on success or failure. Must be the last step in a job.
+    parameters:
+      channel:
+        default: ${TELEGRAM_GROUPID}
+        description: |
+          ID of channel if set, overrides webhook's default channel setting
+        type: string
+      fail_only:
+        default: false
+        description: |
+          If `true`, notifications successful jobs will not be sent
+        type: boolean
+      failure_message:
+        default: '%F0%9F%98%A2 A $CIRCLE_JOB job has failed!'
+        description: Enter custom message.
+        type: string
+      include_job_number_field:
+        default: true
+        description: |
+          Whether or not to include the Job Number field in the message
+        type: boolean
+      include_project_field:
+        default: true
+        description: |
+          Whether or not to include the Project field in the message
+        type: boolean
+      include_visit_job_action:
+        default: true
+        description: |
+          Whether or not to include the Visit Job action in the message
+        type: boolean
+      mentions:
+        default: ""
+        description: |
+          A comma separated list of user IDs. No spaces.
+        type: string
+      only_for_branches:
+        default: ""
+        description: |
+          If set, a comma-separated list of branches for which to send notifications. No spaces.
+        type: string
+      success_message:
+        default: '%F0%9F%98%84 A $CIRCLE_JOB job has succeeded!'
+        description: Enter custom message.
+        type: string
+      webhook:
+        default: ${TELEGRAM_WEBHOOK}
+        description: |
+          Enter either your Webhook value or use the CircleCI UI to add your token under the 'TELEGRAM_WEBHOOK' env var
+        type: string
+    steps:
+    - run:
+        command: |
+          echo 'export TELEGRAM_BUILD_STATUS="fail"' >> $BASH_ENV
+        name: TELEGRAM - Setting Failure Condition
+        when: on_fail
+    - run:
+        command: |
+          echo 'export TELEGRAM_BUILD_STATUS="success"' >> $BASH_ENV
+        name: TELEGRAM - Setting Success Condition
+        when: on_success
+    - run:
+        command: |
+          if [ ! -x /bin/bash ]; then
+            echo Bash not installed.
+            exit 1
+          fi
+        name: Provide error if non-bash shell
+    - run:
+        command: |
+          current_branch_in_filter=false
+
+          IFS="," read -ra BRANCH_FILTERS \<<< "<< parameters.only_for_branches >>"
+
+          for i in "${BRANCH_FILTERS[@]}"; do
+            if [ "${i}" == "${CIRCLE_BRANCH}" ]; then
+              current_branch_in_filter=true
+            fi
+          done
+
+          if [ "x" == "x<< parameters.only_for_branches>>" ] || [ "$current_branch_in_filter" = true ]; then
+            # Provide error if no webhook is set and error. Otherwise continue
+            if [ -z "<< parameters.webhook >>" ]; then
+              echo "NO TELEGRAM WEBHOOK SET"
+              echo "Please input your TELEGRAM_WEBHOOK value either in the settings for this project, or as a parameter for this orb."
+              exit 1
+            else
+              #Create Members string
+              if [ -n "<< parameters.mentions >>" ]; then
+                IFS="," read -ra TELEGRAM_MEMBERS \<<< "<< parameters.mentions >>"
+                for i in "${TELEGRAM_MEMBERS[@]}"; do
+                  if [ $(echo ${i} | head -c 1) == "S" ]; then
+                    TELEGRAM_MENTIONS="${TELEGRAM_MENTIONS}<!subteam^${i}> "
+                  elif echo ${i} | grep -E "^(here|channel|everyone)$" > /dev/null; then
+                    TELEGRAM_MENTIONS="${TELEGRAM_MENTIONS}<!${i}> "
+                  else
+                    TELEGRAM_MENTIONS="${TELEGRAM_MENTIONS}<@${i}> "
+                  fi
+                done
+              fi
+              #If successful
+              if [ "$TELEGRAM_BUILD_STATUS" = "success" ]; then
+                #Skip if fail_only
+                if [ << parameters.fail_only >> = true ]; then
+                  echo "The job completed successfully"
+                  echo '"fail_only" is set to "true". No TELEGRAM notification sent.'
+                else
+                  temoji=%E2%9C%85
+                  curl << parameters.webhook >>/sendMessage?"chat_id=<< parameters.channel >>&text=%F0%9F%94%89 Build Succeeded: Please check details below: %0A %F0%9F%95%9C Date: $(date) %0A $temoji Job Number: $CIRCLE_BUILD_NUM %0A $temoji TRIGGERER: ${CIRCLE_USERNAME} %0A %F0%9F%93%8B MESSAGE: << parameters.success_message >> %0A BUILD_URL: ${CIRCLE_BUILD_URL} %0A"
+                  echo "Job completed successfully. Alert sent."
+                fi
+              else
+                #If Failed
+                temoji=%E2%9D%8C
+          curl << parameters.webhook >>/sendMessage?"chat_id=<< parameters.channel >>&text=%F0%9F%9A%A8 Build Failed: Please check details below: %0A %F0%9F%95%9C Date: $(date) %0A $temoji Job Number: $CIRCLE_BUILD_NUM %0A $temoji TRIGGERER: ${CIRCLE_USERNAME} %0A %F0%9F%93%8B MESSAGE: << parameters.failure_message >> %0A BUILD_URL: ${CIRCLE_BUILD_URL} %0A"
+          
+                echo "Job failed. Alert sent."
+              fi
+            fi
+          else
+            echo "Current branch is not included in only_for_branches filter; no status alert will be sent"
+          fi
+        name: TELEGRAM - Sending Status Alert
+        shell: /bin/bash
+        when: always
+
+executors:
+  default:
+    docker:
+      - image: circleci/node:latest
 
 jobs:
-  notifytest:
-    executor: orb-tools/ubuntu
+  build:
+    executor: default
     steps:
-      - run: exit 0 #toggle this to force success or status for testing
-      - telegram/notify:
-          message: "notification test for the Telegram orb, triggered by *<https://github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/commit/${CIRCLE_SHA1}|commit ${CIRCLE_SHA1}>* on ${CIRCLE_PROJECT_REPONAME}'s *${CIRCLE_BRANCH}* branch (<https://circleci.com/workflow-run/${CIRCLE_WORKFLOW_ID}|workflow here>)"
-          color: "#f4aa42"
-          mentions: "${ORBS_USER_GROUP_UUID}"
+      - checkout # check out the code in the project directory
+      - run: exit 1
+      - status:
+         fail_only: true
