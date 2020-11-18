@@ -187,7 +187,7 @@ jobs:
       - checkout # check out the code in the project directory
       - run: exit 0
       - notification:
-          message: Message from Telegram repo. 
+          message: Message from Telegram - Its Winter. 
       - status:
           fail_only: false
       
